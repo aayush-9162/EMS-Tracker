@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EMS Console</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Sign-in -->
+  <div id="login" class="login" hidden>
+    <form id="login-form" class="card login-card">
+      <h1><span class="brand-dot"></span>EMS Console</h1>
+      <label>Username <input id="login-user" autocomplete="username" required /></label>
+      <label>Password <input id="login-pass" type="password" autocomplete="current-password" required /></label>
+      <p id="login-error" class="error" role="alert" hidden></p>
+      <button class="primary">Sign in</button>
+    </form>
+  </div>
+
+  <div id="app" class="app" hidden>
+    <aside class="side">
+      <div class="brand"><span class="brand-dot"></span>EMS Console</div>
+      <label class="org-pick">Organisation
+        <select id="org" aria-label="Organisation"></select>
+      </label>
+      <nav id="nav">
+        <button data-page="overview" class="active">Overview</button>
+        <button data-page="visits">Websites</button>
+        <button data-page="apps">Applications</button>
+        <button data-page="blocking">Site blocking</button>
+        <button data-page="words">Blacklist words</button>
+        <button data-page="categories">Categories</button>
+        <button data-page="machines">Computers</button>
+        <button data-page="settings">Settings</button>
+        <button data-page="orgs" class="nav-apart">Organisations</button>
+        <button data-page="users">Users</button>
+      </nav>
+      <div class="side-foot">
+        <span id="who"></span>
+        <button id="logout" class="link">Sign out</button>
+      </div>
+    </aside>
+
+    <main>
+      <header class="top">
+        <h2><span id="page-title">Overview</span> <span id="page-org" class="chip" hidden></span></h2>
+        <div class="filters" id="global-filters">
+          <div class="seg" id="range" role="group" aria-label="Date range">
+            <button data-range="today" class="active">Today</button>
+            <button data-range="yesterday">Yesterday</button>
+            <button data-range="7d">7 days</button>
+            <button data-range="30d">30 days</button>
+            <button data-range="custom">Custom</button>
+          </div>
+          <span id="custom-range" hidden>
+            <input type="date" id="from" aria-label="From date" /> <span class="muted">to</span>
+            <input type="date" id="to" aria-label="To date" />
+          </span>
+          <select id="machine" aria-label="Computer"><option value="">All computers</option></select>
+          <button id="refresh" title="Reload">Refresh</button>
+        </div>
+      </header>
+
+      <p id="banner" class="banner" role="alert" hidden></p>
+
+      <!-- Overview -->
+      <section id="page-overview" class="page active">
+        <div class="tiles" id="tiles"></div>
+        <div class="card" id="system-card" hidden></div>
+        <div class="grid two wide-left">
+          <div class="card">
+            <h3 id="activity-title">Active time by hour</h3>
+            <p class="sub" id="activity-sub"></p>
+            <div id="activity" class="columns" role="img" aria-label="Active time over the selected period"></div>
+            <h3 class="spaced">Web time by category</h3>
+            <p class="sub">Share of browsing time in the selected period</p>
+            <div id="categories-bar"></div>
+          </div>
+          <div class="card">
+            <h3>Most active computers</h3>
+            <div id="top-machines" class="bars"></div>
+          </div>
+        </div>
+        <div class="grid two">
+          <div class="card">
+            <h3>Top websites</h3>
+            <div id="top-domains" class="bars"></div>
+          </div>
+          <div class="card">
+            <h3>Top applications</h3>
+            <div id="top-apps" class="bars"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Websites -->
+      <section id="page-visits" class="page">
+        <div class="row">
+          <div class="seg" id="visit-category" role="group" aria-label="Category">
+            <button data-category="suspicious" class="active">Suspicious</button>
+            <button data-category="neutral">Neutral</button>
+            <button data-category="productive">Productive</button>
+            <button data-category="all">All</button>
+          </div>
+          <input id="visit-domain" placeholder="Filter by domain" />
+          <span class="grow"></span>
+          <label class="inline">Min minutes <input type="number" id="report-min" min="0" step="0.5" value="1" class="narrow" /></label>
+          <button id="report-download" title="Suspicious visits longer than the minimum, for the selected dates and computer">Download suspicious report (CSV)</button>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Last seen</th><th>Computer</th><th>Domain</th><th>Page</th><th>Category</th><th class="num">Visits</th><th class="num">Time</th><th></th></tr></thead>
+          <tbody id="visits-body"></tbody>
+        </table></div>
+      </section>
+
+      <!-- Applications -->
+      <section id="page-apps" class="page">
+        <div class="row">
+          <input id="app-filter" placeholder="Filter by application" />
+          <span class="grow"></span>
+          <button id="installed-apps-btn" title="Show every program installed on a computer">Installed programs…</button>
+        </div>
+        <div class="grid two wide-left">
+          <div>
+            <h3>By computer</h3>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Last seen</th><th>Computer</th><th>Application</th><th class="num">Sessions</th><th class="num">Time</th></tr></thead>
+              <tbody id="apps-body"></tbody>
+            </table></div>
+          </div>
+          <div>
+            <h3>Totals</h3>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Application</th><th class="num">Computers</th><th class="num">Time</th></tr></thead>
+              <tbody id="apps-summary-body"></tbody>
+            </table></div>
+            <p class="hint">Select an application to see which windows were open.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Site blocking -->
+      <section id="page-blocking" class="page">
+        <div class="card">
+          <h3>Block a site</h3>
+          <p class="hint">A block reaches each computer at its next check-in (every 5 minutes unless changed under Settings). From then on the site no longer opens there, and a tab already showing it is closed. Unblocking works the same way: it takes effect at the next check-in. Computers that are switched off apply the change when they next start.</p>
+          <form id="block-form" class="row">
+            <input id="block-domain" placeholder="example.com" required />
+            <select id="block-scope" aria-label="Applies to"><option value="*">All computers</option></select>
+            <input id="block-note" placeholder="Reason (optional)" />
+            <button class="primary">Block</button>
+          </form>
+          <p id="block-msg" class="hint" role="status"></p>
+        </div>
+        <h3>Blocked sites</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Domain</th><th>Applies to</th><th>Reason</th><th>Added</th><th></th></tr></thead>
+          <tbody id="blocked-body"></tbody>
+        </table></div>
+        <h3 class="spaced">Attempts to open blocked sites</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Last attempt</th><th>Computer</th><th>Domain</th><th>Address</th><th class="num">Attempts</th></tr></thead>
+          <tbody id="attempts-body"></tbody>
+        </table></div>
+      </section>
+
+      <!-- Blacklist words -->
+      <section id="page-words" class="page">
+        <div class="card">
+          <h3>Blacklist words</h3>
+          <p class="hint">When one of these words or phrases appears in an address or a search, the tab is closed immediately and the attempt is listed below. The site itself is not blocked. Matching is a plain substring match, so short words can match unrelated pages.</p>
+          <form id="word-form" class="row">
+            <input id="word-text" placeholder="Word or phrase" required minlength="2" />
+            <input id="word-note" placeholder="Note (optional)" />
+            <button class="primary">Add</button>
+          </form>
+          <div id="word-list" class="pills"></div>
+        </div>
+        <h3>Detections</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Last hit</th><th>Computer</th><th>Word</th><th>Domain</th><th>Address</th><th class="num">Hits</th></tr></thead>
+          <tbody id="hits-body"></tbody>
+        </table></div>
+      </section>
+
+      <!-- Categories -->
+      <section id="page-categories" class="page">
+        <div class="card">
+          <h3>Word rules</h3>
+          <p class="hint">A visit is categorised automatically when its domain or address contains one of these words. An explicit domain category below always wins.</p>
+          <form id="keyword-form" class="row">
+            <input id="keyword-text" placeholder="Word in the address" required minlength="2" />
+            <select id="keyword-category"><option value="productive">Productive</option><option value="neutral">Neutral</option><option value="suspicious">Suspicious</option></select>
+            <button class="primary">Add rule</button>
+          </form>
+          <div id="keyword-list" class="pills"></div>
+        </div>
+        <div class="card">
+          <h3>Domain categories</h3>
+          <p class="hint">Applies to the domain and its subdomains. Sites without a category count as suspicious until reviewed.</p>
+          <form id="domain-cat-form" class="row">
+            <input id="domain-cat-domain" placeholder="example.com" required />
+            <select id="domain-cat-category"><option value="productive">Productive</option><option value="neutral">Neutral</option><option value="suspicious">Suspicious</option></select>
+            <button class="primary">Set category</button>
+          </form>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Domain</th><th>Category</th><th>Updated</th><th></th></tr></thead>
+          <tbody id="domain-cat-body"></tbody>
+        </table></div>
+      </section>
+
+      <!-- Computers -->
+      <section id="page-machines" class="page">
+        <div class="row">
+          <input id="machine-search" placeholder="Search name, user or label" />
+          <span id="machine-count" class="muted"></span>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Status</th><th>Computer</th><th>User</th><th>Label</th><th>System</th><th>Agent</th><th>Address</th><th>Last seen</th><th></th></tr></thead>
+          <tbody id="machines-body"></tbody>
+        </table></div>
+      </section>
+
+      <!-- Organisations -->
+      <section id="page-orgs" class="page">
+        <div class="card">
+          <h3>New organisation</h3>
+          <p class="hint">Each client company is an organisation. Enter its name and an installer is made for it alone: every computer that installer is run on appears under this organisation. Its computers, blocked sites, blacklist words, categories, settings and reports are kept apart from every other organisation's.</p>
+          <form id="org-form" class="row">
+            <input id="org-name" placeholder="Organisation name" required minlength="2" maxlength="60" autocomplete="off" />
+            <button class="primary" id="org-create">Create and download installer</button>
+          </form>
+          <p id="org-msg" class="hint" role="status"></p>
+        </div>
+        <h3>Organisations</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Name</th><th class="num">Computers</th><th class="num">Online</th><th>Agent</th><th>Created</th><th></th></tr></thead>
+          <tbody id="orgs-body"></tbody>
+        </table></div>
+        <p class="hint">To rename an organisation, edit its name and press Enter. Installed computers are not affected by a rename.</p>
+
+        <div class="card">
+          <h3>Update the agent on all computers</h3>
+          <p class="hint" id="agent-program-state"></p>
+          <p class="hint">To release a new version, choose the new <code>ems-agent.exe</code> and confirm with your password. Each computer downloads it at its next check-in, checks it and restarts itself on it. The same program goes to every organisation, and every computer stays in its own organisation: which organisation a computer belongs to is stored on that computer, not in the program, so an update cannot move or mix computers. To hold one organisation back, turn automatic updates off in its Settings first.</p>
+          <form id="agent-upload-form" class="row">
+            <input type="file" id="agent-file" accept=".exe" required aria-label="New agent program" />
+            <input type="password" id="agent-password" placeholder="Your password" autocomplete="current-password" required aria-label="Your password" />
+            <button class="primary" id="agent-upload-go">Upload and roll out</button>
+          </form>
+          <p id="agent-upload-msg" class="hint" role="status"></p>
+        </div>
+      </section>
+
+      <!-- Users -->
+      <section id="page-users" class="page">
+        <div class="card">
+          <h3>New user</h3>
+          <p class="hint">Create a login for someone who helps manage organisations. You (an owner) see and manage everything; a member can reach only the organisations you grant, and only do what you allow there. Give access with "Edit access" after creating the user.</p>
+          <form id="user-form" class="row">
+            <input id="user-name" placeholder="Username" required minlength="2" maxlength="64" autocomplete="off" />
+            <input id="user-pass" type="password" placeholder="Password (min 8)" required minlength="8" autocomplete="new-password" />
+            <label class="check"><input type="checkbox" id="user-owner" /> Make this an owner (full access to everything)</label>
+            <button class="primary">Create user</button>
+          </form>
+          <p id="user-msg" class="hint" role="status"></p>
+        </div>
+        <h3>Users</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>User</th><th>Role</th><th>Access</th><th>Created</th><th></th></tr></thead>
+          <tbody id="users-body"></tbody>
+        </table></div>
+      </section>
+
+      <!-- Settings -->
+      <section id="page-settings" class="page">
+        <div class="grid two">
+          <form id="settings-form" class="card stack">
+            <h3>Tracking</h3>
+            <label class="check"><input type="checkbox" id="set-track-web" /> Record websites</label>
+            <label class="check"><input type="checkbox" id="set-track-apps" /> Record applications</label>
+            <label>What to store for each page
+              <select id="set-url-mode">
+                <option value="full">Full address</option>
+                <option value="strip_query">Address without the query string</option>
+                <option value="domain_only">Domain only</option>
+              </select>
+            </label>
+            <label>Count the user as away after (minutes without input)
+              <input type="number" id="set-idle" min="1" max="60" required />
+            </label>
+            <label>Check in with the server every (seconds)
+              <input type="number" id="set-upload" min="15" max="3600" required />
+            </label>
+            <p class="hint">Between check-ins activity is kept on the computer and the server is not contacted. Each check-in uploads it and picks up changes to blocking and settings. A shorter interval applies changes sooner; a longer one means fewer requests to the server.</p>
+            <h3 class="spaced">Blocking</h3>
+            <label class="check"><input type="checkbox" id="set-close-tabs" /> Close a tab that is showing a blocked site</label>
+            <label class="check"><input type="checkbox" id="set-notify" /> Show the user a notice when something is blocked (off: the tab just closes)</label>
+            <label class="check"><input type="checkbox" id="set-browser-policy" /> Also give browsers their own block list</label>
+            <p class="hint">Leave this off unless you need it. With it on, Chrome, Edge, Brave and Firefox refuse blocked sites themselves, even if the agent's tray helper is stopped. The cost: an open browser takes up to 15 minutes to notice a change, so a site stays blocked that long after you unblock it or remove the agent, and the browser shows "managed by your organization".</p>
+            <h3 class="spaced">Agent updates</h3>
+            <label class="check"><input type="checkbox" id="set-auto-update" /> Update the agent on this organisation's computers automatically</label>
+            <p class="hint" id="auto-update-hint">When the server holds a newer agent, each computer downloads it at its next check-in, checks it, and restarts itself on it. Nobody has to visit the computer. Turn this off to keep this organisation on the agent it has. A new version is released on the Organisations page.</p>
+            <h3 class="spaced">Data</h3>
+            <label>Keep activity for (days, 0 keeps everything)
+              <input type="number" id="set-retention" min="0" max="3650" required />
+            </label>
+            <label>Reporting time zone (minutes ahead of UTC)
+              <input type="number" id="set-tz" min="-720" max="840" required />
+            </label>
+            <p class="hint" id="tz-hint"></p>
+            <div class="row"><button type="button" id="clear-activity" class="danger">Clear recorded activity now</button></div>
+            <p class="hint">Deletes this organisation's recorded website and application activity (and the blocked-attempt and word-hit logs) right now. Blocked sites, blacklist words, categories and computers are kept. Automatic deletion still follows the days above.</p>
+            <div class="row"><button class="primary">Save</button><span id="settings-msg" class="hint" role="status"></span></div>
+          </form>
+
+          <div class="stack">
+            <div class="card stack">
+              <h3>Install the agent</h3>
+              <div id="installer-ready" class="stack">
+                <p class="hint">This installer is made for <b class="org-name"></b>. Run it on each of its computers: it asks Windows for permission, installs itself and starts reporting. There is nothing to type, and the computer appears under Computers for this organisation by its name.</p>
+                <div class="row"><button id="download-installer" class="primary">Download installer</button></div>
+              </div>
+              <div id="installer-missing" class="stack" hidden>
+                <p class="hint">Save this settings file, made for <b class="org-name"></b>, in the same folder as <code>ems-agent.exe</code>, then double-click <code>ems-agent.exe</code> on each computer. It asks Windows for permission, installs itself and starts reporting.</p>
+                <div class="row"><button id="download-setup-file" class="primary">Download ems-agent.json</button></div>
+                <p class="hint">To get a single ready-made installer here instead, copy <code>ems-agent.exe</code> into the server's data folder.</p>
+              </div>
+            </div>
+            <div class="card stack">
+              <h3>Report API key</h3>
+              <p class="hint">A read-only key for scripts that fetch this organisation's reports, sent as <code>Authorization: Bearer &lt;key&gt;</code>. It cannot read any other organisation.</p>
+              <p id="api-key-state" class="hint"></p>
+              <pre id="api-key-value" class="code" hidden></pre>
+              <div class="row"><button id="api-key-create">Create new key</button><button id="api-key-revoke">Revoke</button></div>
+            </div>
+            <form id="password-form" class="card stack">
+              <h3>Change password</h3>
+              <label>Current password <input type="password" id="pw-current" autocomplete="current-password" required /></label>
+              <label>New password <input type="password" id="pw-new" autocomplete="new-password" minlength="8" required /></label>
+              <div class="row"><button class="primary">Change</button><span id="password-msg" class="hint" role="status"></span></div>
+            </form>
+            <div class="card">
+              <h3>Server</h3>
+              <dl id="server-info" class="kv"></dl>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="titles-dialog">
+    <div class="dialog-head"><h3 id="titles-heading"></h3><button id="titles-close" class="link">Close</button></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Window</th><th class="num">Sessions</th><th class="num">Time</th></tr></thead>
+      <tbody id="titles-body"></tbody>
+    </table></div>
+  </dialog>
+
+  <dialog id="org-remove-dialog" class="narrow">
+    <form id="org-remove-form" class="stack">
+      <h3 id="org-remove-heading"></h3>
+      <p class="hint" id="org-remove-text"></p>
+      <label>Type the organisation's name to confirm
+        <input id="org-remove-name" autocomplete="off" required />
+      </label>
+      <p id="org-remove-msg" class="error" role="alert" hidden></p>
+      <div class="row"><button class="danger">Remove organisation</button><button type="button" id="org-remove-cancel">Cancel</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="access-dialog">
+    <div class="dialog-head"><h3 id="access-heading">Access</h3><button id="access-close" class="link">Close</button></div>
+    <p class="hint">Tick an organisation to let this user reach it (view its reports and computers). Then tick the extra things they may do there.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Organisation</th><th class="num">Access</th><th class="num">Blocking</th><th class="num">Settings</th><th class="num">Control</th><th class="num">Installer</th></tr></thead>
+      <tbody id="access-body"></tbody>
+    </table></div>
+    <p id="access-msg" class="error" role="alert" hidden></p>
+    <div class="row"><button class="primary" id="access-save">Save access</button><button type="button" id="access-cancel">Cancel</button></div>
+  </dialog>
+
+  <dialog id="userpw-dialog" class="narrow">
+    <form id="userpw-form" class="stack">
+      <h3 id="userpw-heading">Reset password</h3>
+      <label>New password <input type="password" id="userpw-new" minlength="8" autocomplete="new-password" required /></label>
+      <p id="userpw-msg" class="error" role="alert" hidden></p>
+      <div class="row"><button class="primary">Set password</button><button type="button" id="userpw-cancel">Cancel</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="logs-dialog">
+    <div class="dialog-head"><h3 id="logs-heading">Agent log</h3><button id="logs-close" class="link">Close</button></div>
+    <p id="logs-meta" class="muted"></p>
+    <pre id="logs-body" class="code logs"></pre>
+  </dialog>
+
+  <dialog id="power-dialog" class="narrow">
+    <form id="power-form" class="stack">
+      <h3 id="power-heading"></h3>
+      <p class="hint" id="power-text"></p>
+      <p id="power-msg" class="error" role="alert" hidden></p>
+      <div class="row"><button class="primary" id="power-go">Confirm</button><button type="button" id="power-cancel">Cancel</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="apps-dialog">
+    <div class="dialog-head"><h3>Installed programs</h3><button id="apps-close" class="link">Close</button></div>
+    <div class="row">
+      <select id="apps-machine" aria-label="Computer"></select>
+      <input id="apps-search" placeholder="Search programs" />
+      <span class="grow"></span>
+      <span id="apps-meta" class="muted"></span>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Program</th><th>Version</th><th>Publisher</th><th>Installed</th></tr></thead>
+      <tbody id="apps-list-body"></tbody>
+    </table></div>
+  </dialog>
+
+  <div id="tooltip" class="tooltip" hidden></div>
+  <script src="app.js"></script>
+</body>
+</html>

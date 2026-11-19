@@ -1,0 +1,6 @@
+# Statically link the Microsoft Visual C++ runtime into Windows binaries, so
+# the agent runs on a clean Windows PC with no Visual C++ Redistributable
+# installed (otherwise it fails with "VCRUNTIME140.dll was not found").
+# The Linux server target is unaffected.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

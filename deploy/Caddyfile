@@ -1,0 +1,8 @@
+# Caddy terminates TLS (certificates are obtained and renewed automatically)
+# and forwards everything, including the agents' WebSocket, to the EMS server.
+#
+# Replace ems.example.com with the name that points at this VPS.
+
+ems.example.com {
+	reverse_proxy 127.0.0.1:2021
+}
